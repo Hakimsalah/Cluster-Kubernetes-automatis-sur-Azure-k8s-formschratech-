@@ -69,7 +69,7 @@ resource "azurerm_network_security_group" "nsg" {
 }
 
 # =====================
-# VM DEFINITION
+# VMS LOCAL VARIABLES
 # =====================
 locals {
   vms = {
@@ -147,4 +147,16 @@ resource "azurerm_linux_virtual_machine" "vm" {
   tags = {
     role = each.key
   }
+}
+
+# =====================
+# GENERATE ANSIBLE INVENTORY
+# =====================
+resource "local_file" "ansible_inventory" {
+  filename = "${path.module}/../ansible/inventory.ini"
+
+  content = templatefile("${path.module}/inventory.tpl", {
+    master_public_ip = azurerm_public_ip.pip["master"].ip_address
+    worker_public_ip = azurerm_public_ip.pip["worker"].ip_address
+  })
 }
