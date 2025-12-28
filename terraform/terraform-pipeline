@@ -11,7 +11,7 @@ pipeline {
     stages {
         stage('Checkout Terraform') {
             steps {
-                git branch: 'main', url: 'https://github.com/USER/mon-repo.git'
+                git branch: 'main', url: 'https://github.com/Hakimsalah/Cluster-Kubernetes-automatis-sur-Azure-k8s-formschratech-.git'
             }
         }
 
