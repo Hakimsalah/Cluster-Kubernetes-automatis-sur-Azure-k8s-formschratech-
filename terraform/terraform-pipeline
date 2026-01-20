@@ -2,10 +2,21 @@ pipeline {
     agent any
 
     environment {
-        ARM_CLIENT_ID     = credentials('azure-client-id')
-        ARM_CLIENT_SECRET = credentials('azure-client-secret')
+        # Azure credentials
+        ARM_CLIENT_ID       = credentials('azure-client-id')
+        ARM_CLIENT_SECRET   = credentials('azure-client-secret')
         ARM_SUBSCRIPTION_ID = credentials('azure-subscription-id')
-        ARM_TENANT_ID     = credentials('azure-tenant-id')
+        ARM_TENANT_ID       = credentials('azure-tenant-id')
+
+        # Terraform variables stored as Jenkins secrets
+        LOCATION            = credentials('location')
+        RESOURCE_GROUP      = credentials('resource_group_name')
+        VNET_NAME           = credentials('vnet_name')
+        SUBNET_NAME         = credentials('subnet_name')
+        ADMIN_USERNAME      = credentials('admin_username')
+        SSH_KEY_PATH        = credentials('ssh_public_key_path')
+        VM_SIZEM            = credentials('vm_sizem')
+        VM_SIZEW            = credentials('vm_sizew')
     }
 
     stages {
@@ -26,7 +37,21 @@ pipeline {
         stage('Terraform Plan') {
             steps {
                 dir('terraform') {
-                    sh 'terraform plan'
+                    sh '''
+                    terraform plan \
+                      -var="subscription_id=$ARM_SUBSCRIPTION_ID" \
+                      -var="tenant_id=$ARM_TENANT_ID" \
+                      -var="client_id=$ARM_CLIENT_ID" \
+                      -var="client_secret=$ARM_CLIENT_SECRET" \
+                      -var="location=$LOCATION" \
+                      -var="resource_group_name=$RESOURCE_GROUP" \
+                      -var="vnet_name=$VNET_NAME" \
+                      -var="subnet_name=$SUBNET_NAME" \
+                      -var="admin_username=$ADMIN_USERNAME" \
+                      -var="ssh_public_key_path=$SSH_KEY_PATH" \
+                      -var="vm_sizem=$VM_SIZEM" \
+                      -var="vm_sizew=$VM_SIZEW"
+                    '''
                 }
             }
         }
@@ -34,9 +59,32 @@ pipeline {
         stage('Terraform Apply') {
             steps {
                 dir('terraform') {
-                    sh 'terraform apply -auto-approve'
+                    sh '''
+                    terraform apply -auto-approve \
+                      -var="subscription_id=$ARM_SUBSCRIPTION_ID" \
+                      -var="tenant_id=$ARM_TENANT_ID" \
+                      -var="client_id=$ARM_CLIENT_ID" \
+                      -var="client_secret=$ARM_CLIENT_SECRET" \
+                      -var="location=$LOCATION" \
+                      -var="resource_group_name=$RESOURCE_GROUP" \
+                      -var="vnet_name=$VNET_NAME" \
+                      -var="subnet_name=$SUBNET_NAME" \
+                      -var="admin_username=$ADMIN_USERNAME" \
+                      -var="ssh_public_key_path=$SSH_KEY_PATH" \
+                      -var="vm_sizem=$VM_SIZEM" \
+                      -var="vm_sizew=$VM_SIZEW"
+                    '''
                 }
             }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ Terraform apply completed successfully!"
+        }
+        failure {
+            echo "❌ Terraform pipeline failed."
         }
     }
 }
