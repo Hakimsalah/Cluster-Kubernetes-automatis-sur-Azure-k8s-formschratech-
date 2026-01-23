@@ -1,6 +1,21 @@
 # =====================
 # VARIABLES GLOBALES
 # =====================
+variable "subscription_id" {
+  description = "ID de la subscription Azure"
+}
+
+variable "tenant_id" {
+  description = "ID du tenant Azure"
+}
+
+variable "client_id" {
+  description = "ID de l'application/service principal"
+}
+
+variable "client_secret" {
+  description = "Secret du service principal"
+}
 
 variable "resource_group_name" {
   description = "Nom du resource group"
