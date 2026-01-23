@@ -1,24 +1,6 @@
 pipeline {
     agent any
 
-    environment {
-        // Credentials Jenkins
-        ARM_CLIENT_ID       = credentials('azure-client-id')
-        ARM_CLIENT_SECRET   = credentials('azure-client-secret')
-        ARM_SUBSCRIPTION_ID = credentials('azure-subscription-id')
-        ARM_TENANT_ID       = credentials('azure-tenant-id')
-
-        // Variables Terraform
-        LOCATION       = "francecentral"
-        RESOURCE_GROUP = "rg-k8s-formschratech"
-        VNET_NAME      = "k8s-vnet"
-        SUBNET_NAME    = "k8s-subnet"
-        ADMIN_USERNAME = "azureuser"
-        SSH_KEY_PATH   = "/home/jenkins/.ssh/id_rsa.pub"
-        VM_SIZEM       = "Standard_B2s"
-        VM_SIZEW       = "Standard_B2s"
-    }
-
     stages {
         stage('Checkout Terraform') {
             steps {
@@ -37,9 +19,7 @@ pipeline {
         stage('Terraform Plan') {
             steps {
                 dir('terraform') {
-                    sh """
-                    terraform plan
-                    """
+                    sh 'terraform plan'
                 }
             }
         }
@@ -47,9 +27,8 @@ pipeline {
         stage('Terraform Apply') {
             steps {
                 dir('terraform') {
-                    sh """
-                    terraform apply 
-                    """
+                    sh 'terraform apply'
+                    
                 }
             }
         }
