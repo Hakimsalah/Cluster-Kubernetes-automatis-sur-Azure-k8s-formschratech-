@@ -27,33 +27,7 @@ pipeline {
             }
         }
 
-        stage('Terraform Plan') {
-            withCredentials([
-                string(credentialsId: 'azure-subscription-id', variable: 'ARM_SUBSCRIPTION_ID'),
-                string(credentialsId: 'azure-tenant-id', variable: 'ARM_TENANT_ID'),
-                string(credentialsId: 'azure-client-id', variable: 'ARM_CLIENT_ID'),
-                string(credentialsId: 'azure-client-secret', variable: 'ARM_CLIENT_SECRET'),
-                string(credentialsId: 'ssh-public-key', variable: 'SSH_PUBLIC_KEY')
-            ]) {
-                sh '''
-                export ARM_SUBSCRIPTION_ID
-                export ARM_TENANT_ID
-                export ARM_CLIENT_ID
-                export ARM_CLIENT_SECRET
-
-                terraform plan \
-                    -var="location=francecentral" \
-                    -var="resource_group_name=rg-k8s-formschratech" \
-                    -var="vnet_name=k8s-vnet" \
-                    -var="subnet_name=k8s-subnet" \
-                    -var="admin_username=azureuser" \
-                    -var="ssh_public_key=${SSH_PUBLIC_KEY}" \
-                    -var="vm_sizem=Standard_B2s" \
-                    -var="vm_sizew=Standard_B2s"
-                '''
-            }
-}
-
+        
 
         stage('Terraform Apply') {
             steps {
@@ -62,6 +36,7 @@ pipeline {
                     string(credentialsId: 'azure-tenant-id', variable: 'ARM_TENANT_ID'),
                     string(credentialsId: 'azure-client-id', variable: 'ARM_CLIENT_ID'),
                     string(credentialsId: 'azure-client-secret', variable: 'ARM_CLIENT_SECRET')
+                    string(credentialsId: 'ssh-public-key', variable: 'SSH_PUBLIC_KEY')
                 ]) {
                     dir('terraform') {
                         sh """
@@ -75,7 +50,7 @@ pipeline {
                           -var="vnet_name=$VNET_NAME" \
                           -var="subnet_name=$SUBNET_NAME" \
                           -var="admin_username=$ADMIN_USERNAME" \
-                          -var="ssh_public_key_path=$SSH_KEY_PATH" \
+                          -var="ssh_public_key=${SSH_PUBLIC_KEY}" \
                           -var="vm_sizem=$VM_SIZEM" \
                           -var="vm_sizew=$VM_SIZEW"
                         """
