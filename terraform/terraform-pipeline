@@ -7,7 +7,6 @@ pipeline {
         VNET_NAME      = "k8s-vnet"
         SUBNET_NAME    = "k8s-subnet"
         ADMIN_USERNAME = "azureuser"
-        SSH_KEY_PATH   = "/home/jenkins/.ssh/id_rsa.pub"
         VM_SIZEM       = "Standard_B2s"
         VM_SIZEW       = "Standard_B2s"
     }
@@ -15,7 +14,8 @@ pipeline {
     stages {
         stage('Checkout Terraform') {
             steps {
-                git branch: 'main', url: 'https://github.com/Hakimsalah/Cluster-Kubernetes-automatis-sur-Azure-k8s-formschratech-.git'
+                git branch: 'main',
+                    url: 'https://github.com/Hakimsalah/Cluster-Kubernetes-automatis-sur-Azure-k8s-formschratech-.git'
             }
         }
 
@@ -33,28 +33,30 @@ pipeline {
                     string(credentialsId: 'azure-subscription-id', variable: 'ARM_SUBSCRIPTION_ID'),
                     string(credentialsId: 'azure-tenant-id', variable: 'ARM_TENANT_ID'),
                     string(credentialsId: 'azure-client-id', variable: 'ARM_CLIENT_ID'),
-                    string(credentialsId: 'azure-client-secret', variable: 'ARM_CLIENT_SECRET')
+                    string(credentialsId: 'azure-client-secret', variable: 'ARM_CLIENT_SECRET'),
+                    string(credentialsId: 'ssh-public-key', variable: 'SSH_PUBLIC_KEY')
                 ]) {
                     dir('terraform') {
                         sh '''
                         terraform plan \
-                          -var="subscription_id=$ARM_SUBSCRIPTION_ID" \
-                          -var="tenant_id=$ARM_TENANT_ID" \
-                          -var="client_id=$ARM_CLIENT_ID" \
-                          -var="client_secret=$ARM_CLIENT_SECRET" \
-                          -var="location=$LOCATION" \
-                          -var="resource_group_name=$RESOURCE_GROUP" \
-                          -var="vnet_name=$VNET_NAME" \
-                          -var="subnet_name=$SUBNET_NAME" \
-                          -var="admin_username=$ADMIN_USERNAME" \
-                          -var="ssh_public_key_path=$SSH_KEY_PATH" \
-                          -var="vm_sizem=$VM_SIZEM" \
-                          -var="vm_sizew=$VM_SIZEW"
+                          -var="subscription_id=${ARM_SUBSCRIPTION_ID}" \
+                          -var="tenant_id=${ARM_TENANT_ID}" \
+                          -var="client_id=${ARM_CLIENT_ID}" \
+                          -var="client_secret=${ARM_CLIENT_SECRET}" \
+                          -var="location=${LOCATION}" \
+                          -var="resource_group_name=${RESOURCE_GROUP}" \
+                          -var="vnet_name=${VNET_NAME}" \
+                          -var="subnet_name=${SUBNET_NAME}" \
+                          -var="admin_username=${ADMIN_USERNAME}" \
+                          -var="ssh_public_key=${SSH_PUBLIC_KEY}" \
+                          -var="vm_sizem=${VM_SIZEM}" \
+                          -var="vm_sizew=${VM_SIZEW}"
                         '''
                     }
                 }
             }
         }
+    }
 
         stage('Terraform Apply') {
             steps {
@@ -62,23 +64,24 @@ pipeline {
                     string(credentialsId: 'azure-subscription-id', variable: 'ARM_SUBSCRIPTION_ID'),
                     string(credentialsId: 'azure-tenant-id', variable: 'ARM_TENANT_ID'),
                     string(credentialsId: 'azure-client-id', variable: 'ARM_CLIENT_ID'),
-                    string(credentialsId: 'azure-client-secret', variable: 'ARM_CLIENT_SECRET')
+                    string(credentialsId: 'azure-client-secret', variable: 'ARM_CLIENT_SECRET'),
+                    string(credentialsId: 'ssh-public-key', variable: 'SSH_PUBLIC_KEY')
                 ]) {
                     dir('terraform') {
                         sh '''
                         terraform apply -auto-approve \
-                          -var="subscription_id=$ARM_SUBSCRIPTION_ID" \
-                          -var="tenant_id=$ARM_TENANT_ID" \
-                          -var="client_id=$ARM_CLIENT_ID" \
-                          -var="client_secret=$ARM_CLIENT_SECRET" \
-                          -var="location=$LOCATION" \
-                          -var="resource_group_name=$RESOURCE_GROUP" \
-                          -var="vnet_name=$VNET_NAME" \
-                          -var="subnet_name=$SUBNET_NAME" \
-                          -var="admin_username=$ADMIN_USERNAME" \
-                          -var="ssh_public_key_path=$SSH_KEY_PATH" \
-                          -var="vm_sizem=$VM_SIZEM" \
-                          -var="vm_sizew=$VM_SIZEW"
+                          -var="subscription_id=${ARM_SUBSCRIPTION_ID}" \
+                          -var="tenant_id=${ARM_TENANT_ID}" \
+                          -var="client_id=${ARM_CLIENT_ID}" \
+                          -var="client_secret=${ARM_CLIENT_SECRET}" \
+                          -var="location=${LOCATION}" \
+                          -var="resource_group_name=${RESOURCE_GROUP}" \
+                          -var="vnet_name=${VNET_NAME}" \
+                          -var="subnet_name=${SUBNET_NAME}" \
+                          -var="admin_username=${ADMIN_USERNAME}" \
+                          -var="ssh_public_key=${SSH_PUBLIC_KEY}" \
+                          -var="vm_sizem=${VM_SIZEM}" \
+                          -var="vm_sizew=${VM_SIZEW}"
                         '''
                     }
                 }
