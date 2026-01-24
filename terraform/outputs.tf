@@ -1,20 +1,12 @@
-output "public_ips" {
-  value = {
-    for name, ip in azurerm_public_ip.pip :
-    name => ip.ip_address
-  }
+output "master_public_ip" {
+  value = azurerm_public_ip.pip["master"].ip_address
+  description = "IP publique du master Kubernetes"
 }
 
-output "private_ips" {
-  value = {
-    for name, nic in azurerm_network_interface.nic :
-    name => nic.private_ip_address
-  }
-}
-
-output "ssh_commands" {
-  value = {
-    for name, ip in azurerm_public_ip.pip :
-    name => "ssh ${var.admin_username}@${ip.ip_address}"
-  }
+output "worker_public_ips" {
+  value = [
+    for name, ip in azurerm_public_ip.pip : ip.ip_address
+    if name != "master"
+  ]
+  description = "Liste des IPs publiques des workers Kubernetes"
 }
