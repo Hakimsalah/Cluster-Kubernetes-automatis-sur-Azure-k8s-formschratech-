@@ -87,6 +87,32 @@ pipeline {
                 }
             }
         }
+        stage('Generate Ansible Inventory') {
+            steps {
+                dir('ansible') {
+                    sh '''
+                    # Récupérer les IPs depuis Terraform
+                    MASTER_IP=$(terraform -chdir=../terraform output -raw master_public_ip)
+                    WORKER_IPS=$(terraform -chdir=../terraform output -json worker_public_ips | jq -r '.[]')
+
+                    # Créer le fichier inventory.ini
+                    cat > inventory.ini <<EOF
+                        [masters]
+                        master ansible_host=$MASTER_IP ansible_user=azureuser ansible_ssh_private_key_file=${SSH_KEY_PATH}
+
+                        [workers]
+                        EOF
+
+                    for ip in $WORKER_IPS; do
+                        echo "worker ansible_host=$ip ansible_user=azureuser ansible_ssh_private_key_file=${SSH_KEY_PATH}" >> inventory.ini
+                    done
+
+                    echo "✅ Inventory Ansible généré :"
+                    cat inventory.ini
+                    '''
+                }
+            }
+        }
     }
 
     post {
