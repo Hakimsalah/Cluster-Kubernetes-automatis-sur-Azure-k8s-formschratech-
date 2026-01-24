@@ -12,18 +12,23 @@ pipeline {
             }
         }
 
-        stage('Deploy to Kubernetes') {
-            steps {
-                dir('k8s-manifests') {
-                    sh '''
-                    kubectl apply -f .
-                    kubectl rollout status deployment/backend-deployment
-                    kubectl rollout status deployment/frontend-deployment
-                    kubectl rollout status deployment/mysql-deployment
-                    '''
-                }
-            }
+       stage('Deploy to Kubernetes') {
+    steps {
+        dir('k8s-manifests') {
+            sh '''
+            kubectl apply -f backend/
+            kubectl apply -f frontend/
+            kubectl apply -f database/
+            kubectl apply -f ingress/
+            
+            kubectl rollout status deployment/backend-deployment
+            kubectl rollout status deployment/frontend-deployment
+            kubectl rollout status deployment/mysql-deployment
+            '''
         }
+    }
+}
+
 
         stage('Verify') {
             steps {
