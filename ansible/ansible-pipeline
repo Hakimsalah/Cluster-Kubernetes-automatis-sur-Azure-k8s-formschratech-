@@ -1,17 +1,54 @@
 pipeline {
     agent any
 
+    environment {
+        TERRAFORM_DIR = 'terraform'
+        ANSIBLE_DIR  = 'ansible'
+        SSH_KEY_PATH = '/var/lib/jenkins/.ssh/k8s_key' // chemin vers ta clé privée SSH
+    }
+
     stages {
-        stage('Checkout Ansible') {
+
+        stage('Checkout Ansible & Terraform') {
             steps {
+                // Récupération du repo pour Terraform et Ansible
                 git branch: 'main', url: 'https://github.com/Hakimsalah/Cluster-Kubernetes-automatis-sur-Azure-k8s-formschratech-.git'
+            }
+        }
+
+        stage('Generate Ansible Inventory') {
+            steps {
+                dir("${ANSIBLE_DIR}") {
+                    sh '''
+                    # Récupérer les IPs depuis Terraform
+                    MASTER_IP=$(terraform -chdir=../terraform output -raw master_public_ip)
+                    WORKER_IPS=$(terraform -chdir=../terraform output -json worker_public_ips | jq -r '.[]')
+
+                    # Générer inventory.ini
+                    cat > inventory.ini <<EOF
+[masters]
+master ansible_host=$MASTER_IP ansible_user=azureuser ansible_ssh_private_key_file=${SSH_KEY_PATH}
+
+[workers]
+EOF
+
+                    for ip in $WORKER_IPS; do
+                        echo "worker ansible_host=$ip ansible_user=azureuser ansible_ssh_private_key_file=${SSH_KEY_PATH}" >> inventory.ini
+                    done
+
+                    echo "✅ Inventory Ansible généré :"
+                    cat inventory.ini
+                    '''
+                }
             }
         }
 
         stage('Run Ansible Playbook') {
             steps {
-                dir('ansible') {
-                    sh 'ansible-playbook -i inventory.ini playbook.yml'
+                dir("${ANSIBLE_DIR}") {
+                    sh '''
+                    ansible-playbook -i inventory.ini playbook.yml
+                    '''
                 }
             }
         }
@@ -20,6 +57,9 @@ pipeline {
     post {
         success {
             echo "✅ Kubernetes configuré (kubeadm + CNI)"
+        }
+        failure {
+            echo "❌ La configuration Kubernetes via Ansible a échoué"
         }
     }
 }
