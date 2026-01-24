@@ -37,9 +37,6 @@ variable "admin_username" {
   description = "Nom d'utilisateur admin pour les VMs"
 }
 
-variable "ssh_public_key_path" {
-  description = "Chemin vers la clé publique SSH"
-}
 variable "ssh_public_key" {
   type = string
 }
