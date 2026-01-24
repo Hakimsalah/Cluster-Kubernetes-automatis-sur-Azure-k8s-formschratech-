@@ -40,6 +40,9 @@ variable "admin_username" {
 variable "ssh_public_key_path" {
   description = "Chemin vers la clé publique SSH"
 }
+variable "ssh_public_key" {
+  type = string
+}
 
 # =====================
 # TAILLE DES VMS

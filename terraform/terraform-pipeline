@@ -28,34 +28,32 @@ pipeline {
         }
 
         stage('Terraform Plan') {
-            steps {
-                // Utilisation sécurisée des secrets Azure
-                withCredentials([
-                    string(credentialsId: 'azure-subscription-id', variable: 'ARM_SUBSCRIPTION_ID'),
-                    string(credentialsId: 'azure-tenant-id', variable: 'ARM_TENANT_ID'),
-                    string(credentialsId: 'azure-client-id', variable: 'ARM_CLIENT_ID'),
-                    string(credentialsId: 'azure-client-secret', variable: 'ARM_CLIENT_SECRET')
-                ]) {
-                    dir('terraform') {
-                        sh """
-                        terraform plan \
-                          -var="subscription_id=$ARM_SUBSCRIPTION_ID" \
-                          -var="tenant_id=$ARM_TENANT_ID" \
-                          -var="client_id=$ARM_CLIENT_ID" \
-                          -var="client_secret=$ARM_CLIENT_SECRET" \
-                          -var="location=$LOCATION" \
-                          -var="resource_group_name=$RESOURCE_GROUP" \
-                          -var="vnet_name=$VNET_NAME" \
-                          -var="subnet_name=$SUBNET_NAME" \
-                          -var="admin_username=$ADMIN_USERNAME" \
-                          -var="ssh_public_key_path=$SSH_KEY_PATH" \
-                          -var="vm_sizem=$VM_SIZEM" \
-                          -var="vm_sizew=$VM_SIZEW"
-                        """
-                    }
-                }
+            withCredentials([
+                string(credentialsId: 'azure-subscription-id', variable: 'ARM_SUBSCRIPTION_ID'),
+                string(credentialsId: 'azure-tenant-id', variable: 'ARM_TENANT_ID'),
+                string(credentialsId: 'azure-client-id', variable: 'ARM_CLIENT_ID'),
+                string(credentialsId: 'azure-client-secret', variable: 'ARM_CLIENT_SECRET'),
+                string(credentialsId: 'ssh-public-key', variable: 'SSH_PUBLIC_KEY')
+            ]) {
+                sh '''
+                export ARM_SUBSCRIPTION_ID
+                export ARM_TENANT_ID
+                export ARM_CLIENT_ID
+                export ARM_CLIENT_SECRET
+
+                terraform plan \
+                    -var="location=francecentral" \
+                    -var="resource_group_name=rg-k8s-formschratech" \
+                    -var="vnet_name=k8s-vnet" \
+                    -var="subnet_name=k8s-subnet" \
+                    -var="admin_username=azureuser" \
+                    -var="ssh_public_key=${SSH_PUBLIC_KEY}" \
+                    -var="vm_sizem=Standard_B2s" \
+                    -var="vm_sizew=Standard_B2s"
+                '''
             }
-        }
+}
+
 
         stage('Terraform Apply') {
             steps {
