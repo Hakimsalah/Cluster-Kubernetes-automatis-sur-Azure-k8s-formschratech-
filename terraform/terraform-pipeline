@@ -68,15 +68,20 @@ pipeline {
            ANSIBLE DEPLOY
         ======================= */
         stage('Ansible Apply') {
-            steps {
-                dir('ansible') { // ton dossier ansible
-                    sh '''
-                    ansible-playbook -i ../ansible/inventory.ini playbook.yml \
-                      --extra-vars "admin_user=${ADMIN_USERNAME}"
-                    '''
-                }
+    steps {
+        withCredentials([sshUserPrivateKey(credentialsId: 'k8s-ssh-key', keyFileVariable: 'SSH_KEY')]) {
+            dir('ansible') {
+                sh '''
+                ansible-playbook -i inventory.ini playbook.yml \
+                  --private-key $SSH_KEY \
+                  --user azureuser \
+                  --extra-vars "admin_user=${ADMIN_USERNAME}"
+                '''
             }
         }
+    }
+}
+
     }
 
     post {
