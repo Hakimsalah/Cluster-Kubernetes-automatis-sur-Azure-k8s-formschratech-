@@ -14,7 +14,7 @@ pipeline {
     stages {
 
         /* =======================
-           CHECKOUT UNIQUE
+           CHECKOUT REPO
         ======================= */
         stage('Checkout Repo') {
             steps {
@@ -65,52 +65,14 @@ pipeline {
         }
 
         /* =======================
-           INVENTORY DYNAMIQUE
+           ANSIBLE DEPLOY
         ======================= */
-        stage('Generate Ansible Inventory') {
+        stage('Ansible Apply') {
             steps {
-                withCredentials([
-                    sshUserPrivateKey(
-                        credentialsId: 'ssh-private-key',
-                        keyFileVariable: 'SSH_KEY_PATH'
-                    )
-                ]) {
-                    dir('ansible') {
-                        sh '''
-                        echo "📥 Récupération des IPs depuis Terraform..."
-
-                        PUBLIC_IPS=$(terraform -chdir=../terraform output -json public_ips)
-
-                        MASTER_IP=$(echo $PUBLIC_IPS | jq -r '.master')
-                        WORKER_IPS=$(echo $PUBLIC_IPS | jq -r 'del(.master) | .[]')
-
-                        cat > inventory.ini <<EOF
-[masters]
-master ansible_host=$MASTER_IP ansible_user=azureuser ansible_ssh_private_key_file=$SSH_KEY_PATH
-
-[workers]
-EOF
-
-                        for ip in $WORKER_IPS; do
-                          echo "worker ansible_host=$ip ansible_user=azureuser ansible_ssh_private_key_file=$SSH_KEY_PATH" >> inventory.ini
-                        done
-
-                        echo "✅ Inventory généré :"
-                        cat inventory.ini
-                        '''
-                    }
-                }
-            }
-        }
-
-        /* =======================
-           ANSIBLE
-        ======================= */
-        stage('Run Ansible Playbook') {
-            steps {
-                dir('ansible') {
+                dir('ansible') { // ton dossier ansible
                     sh '''
-                    ansible-playbook -i inventory.ini playbook.yml
+                    ansible-playbook -i ../ansible/inventory.ini playbook.yml \
+                      --extra-vars "admin_user=${ADMIN_USERNAME}"
                     '''
                 }
             }
@@ -119,7 +81,7 @@ EOF
 
     post {
         success {
-            echo "✅ Infrastructure + Kubernetes configurés avec succès 🚀"
+            echo "✅ Infrastructure + Kubernetes + Ansible configurés avec succès 🚀"
         }
         failure {
             echo "❌ Pipeline échoué"
