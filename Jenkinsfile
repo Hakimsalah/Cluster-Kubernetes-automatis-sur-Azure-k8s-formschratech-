@@ -8,12 +8,6 @@ pipeline {
             }
         }
 
-        stage('Ansible - Configuration') {
-            steps {
-                build job: 'ansible-pipeline'
-            }
-        }
-
         stage('CD - Kubernetes Manifests') {
             steps {
                 build job: 'cd-manifests-pipeline'

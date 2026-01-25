@@ -12,13 +12,20 @@ pipeline {
     }
 
     stages {
-        stage('Checkout Terraform') {
+
+        /* =======================
+           CHECKOUT UNIQUE
+        ======================= */
+        stage('Checkout Repo') {
             steps {
                 git branch: 'main',
                     url: 'https://github.com/Hakimsalah/Cluster-Kubernetes-automatis-sur-Azure-k8s-formschratech-.git'
             }
         }
 
+        /* =======================
+           TERRAFORM
+        ======================= */
         stage('Terraform Init') {
             steps {
                 dir('terraform') {
@@ -26,37 +33,6 @@ pipeline {
                 }
             }
         }
-
-        stage('Terraform Plan') {
-            steps {
-                withCredentials([
-                    string(credentialsId: 'azure-subscription-id', variable: 'ARM_SUBSCRIPTION_ID'),
-                    string(credentialsId: 'azure-tenant-id', variable: 'ARM_TENANT_ID'),
-                    string(credentialsId: 'azure-client-id', variable: 'ARM_CLIENT_ID'),
-                    string(credentialsId: 'azure-client-secret', variable: 'ARM_CLIENT_SECRET'),
-                    string(credentialsId: 'ssh-public-key', variable: 'SSH_PUBLIC_KEY')
-                ]) {
-                    dir('terraform') {
-                        sh '''
-                        terraform plan \
-                          -var="subscription_id=${ARM_SUBSCRIPTION_ID}" \
-                          -var="tenant_id=${ARM_TENANT_ID}" \
-                          -var="client_id=${ARM_CLIENT_ID}" \
-                          -var="client_secret=${ARM_CLIENT_SECRET}" \
-                          -var="location=${LOCATION}" \
-                          -var="resource_group_name=${RESOURCE_GROUP}" \
-                          -var="vnet_name=${VNET_NAME}" \
-                          -var="subnet_name=${SUBNET_NAME}" \
-                          -var="admin_username=${ADMIN_USERNAME}" \
-                          -var="ssh_public_key=${SSH_PUBLIC_KEY}" \
-                          -var="vm_sizem=${VM_SIZEM}" \
-                          -var="vm_sizew=${VM_SIZEW}"
-                        '''
-                    }
-                }
-            }
-        }
-    
 
         stage('Terraform Apply') {
             steps {
@@ -87,28 +63,54 @@ pipeline {
                 }
             }
         }
+
+        /* =======================
+           INVENTORY DYNAMIQUE
+        ======================= */
         stage('Generate Ansible Inventory') {
+            steps {
+                withCredentials([
+                    sshUserPrivateKey(
+                        credentialsId: 'ssh-private-key',
+                        keyFileVariable: 'SSH_KEY_PATH'
+                    )
+                ]) {
+                    dir('ansible') {
+                        sh '''
+                        echo "📥 Récupération des IPs depuis Terraform..."
+
+                        PUBLIC_IPS=$(terraform -chdir=../terraform output -json public_ips)
+
+                        MASTER_IP=$(echo $PUBLIC_IPS | jq -r '.master')
+                        WORKER_IPS=$(echo $PUBLIC_IPS | jq -r 'del(.master) | .[]')
+
+                        cat > inventory.ini <<EOF
+[masters]
+master ansible_host=$MASTER_IP ansible_user=azureuser ansible_ssh_private_key_file=$SSH_KEY_PATH
+
+[workers]
+EOF
+
+                        for ip in $WORKER_IPS; do
+                          echo "worker ansible_host=$ip ansible_user=azureuser ansible_ssh_private_key_file=$SSH_KEY_PATH" >> inventory.ini
+                        done
+
+                        echo "✅ Inventory généré :"
+                        cat inventory.ini
+                        '''
+                    }
+                }
+            }
+        }
+
+        /* =======================
+           ANSIBLE
+        ======================= */
+        stage('Run Ansible Playbook') {
             steps {
                 dir('ansible') {
                     sh '''
-                    # Récupérer les IPs depuis Terraform
-                    MASTER_IP=$(terraform -chdir=../terraform output -raw master_public_ip)
-                    WORKER_IPS=$(terraform -chdir=../terraform output -json worker_public_ips | jq -r '.[]')
-
-                    # Créer le fichier inventory.ini
-                    cat > inventory.ini <<EOF
-                        [masters]
-                        master ansible_host=$MASTER_IP ansible_user=azureuser ansible_ssh_private_key_file=${SSH_KEY_PATH}
-
-                        [workers]
-                        EOF
-
-                    for ip in $WORKER_IPS; do
-                        echo "worker ansible_host=$ip ansible_user=azureuser ansible_ssh_private_key_file=${SSH_KEY_PATH}" >> inventory.ini
-                    done
-
-                    echo "✅ Inventory Ansible généré :"
-                    cat inventory.ini
+                    ansible-playbook -i inventory.ini playbook.yml
                     '''
                 }
             }
@@ -117,10 +119,10 @@ pipeline {
 
     post {
         success {
-            echo "✅ Terraform apply completed successfully!"
+            echo "✅ Infrastructure + Kubernetes configurés avec succès 🚀"
         }
         failure {
-            echo "❌ Terraform pipeline failed."
+            echo "❌ Pipeline échoué"
         }
     }
 }
