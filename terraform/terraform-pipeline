@@ -13,9 +13,6 @@ pipeline {
 
     stages {
 
-        /* =======================
-           CHECKOUT REPO
-        ======================= */
         stage('Checkout Repo') {
             steps {
                 git branch: 'main',
@@ -23,9 +20,6 @@ pipeline {
             }
         }
 
-        /* =======================
-           TERRAFORM
-        ======================= */
         stage('Terraform Init') {
             steps {
                 dir('terraform') {
@@ -64,32 +58,33 @@ pipeline {
             }
         }
 
-        /* =======================
-           ANSIBLE DEPLOY
-        ======================= */
         stage('Ansible Apply') {
-    steps {
-        withCredentials([sshUserPrivateKey(credentialsId: 'k8s-ssh-key', keyFileVariable: 'SSH_KEY')]) {
-            dir('ansible') {
-                sh '''
-                ansible-playbook -i inventory.ini playbook.yml \
-                  --private-key $SSH_KEY \
-                  --user azureuser \
-                  --extra-vars "admin_user=${ADMIN_USERNAME}"
-                '''
+            steps {
+                withCredentials([
+                    sshUserPrivateKey(
+                        credentialsId: 'k8s-ssh-key',
+                        keyFileVariable: 'SSH_KEY'
+                    )
+                ]) {
+                    dir('ansible') {
+                        sh '''
+                        ansible-playbook -i inventory.ini playbook.yml \
+                          --private-key $SSH_KEY \
+                          --user azureuser \
+                          --extra-vars "admin_user=azureuser"
+                        '''
+                    }
+                }
             }
         }
-    }
-}
-
     }
 
     post {
         success {
-            echo "✅ Infrastructure + Kubernetes + Ansible configurés avec succès 🚀"
+            echo "✅ Terraform + Ansible exécutés avec succès"
         }
         failure {
-            echo "❌ Pipeline échoué"
+            echo "❌ Échec du pipeline"
         }
     }
 }
