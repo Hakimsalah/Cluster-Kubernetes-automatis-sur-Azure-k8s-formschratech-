@@ -1,41 +1,42 @@
 pipeline {
     agent any
 
-    environment {
-        KUBECONFIG = "/var/lib/jenkins/.kube/config"
-    }
-
     stages {
+
         stage('Checkout Manifests') {
             steps {
                 git branch: 'main', url: 'https://github.com/Hakimsalah/Cluster-Kubernetes-automatis-sur-Azure-k8s-formschratech-.git'
             }
         }
 
-       stage('Deploy to Kubernetes') {
-    steps {
-        dir('k8s-manifests') {
-            sh '''
-            kubectl apply -f backend/
-            kubectl apply -f frontend/
-            kubectl apply -f database/
-            kubectl apply -f ingress/
-            
-            kubectl rollout status deployment/backend-deployment
-            kubectl rollout status deployment/frontend-deployment
-            kubectl rollout status deployment/mysql-deployment
-            '''
-        }
-    }
-}
-
-
-        stage('Verify') {
+        stage('Deploy to Kubernetes') {
             steps {
-                dir('k8s-manifests') {
+                // Utilise le kubeconfig secret
+                withCredentials([file(credentialsId: 'kubeconfig-secret', variable: 'KUBECONFIG')]) {
+                    dir('k8s-manifests') {
+                        sh '''
+                        kubectl apply -f database/
+                        kubectl apply -f backend/
+                        kubectl apply -f frontend/
+                        kubectl apply -f ingress/
+
+                        kubectl rollout status deployment/mysql-deployment
+                        kubectl rollout status deployment/backend-deployment
+                        kubectl rollout status deployment/frontend-deployment
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Verify Deployments') {
+            steps {
+                withCredentials([file(credentialsId: 'kubeconfig-secret', variable: 'KUBECONFIG')]) {
                     sh '''
+                    kubectl get nodes
                     kubectl get pods -n default
                     kubectl get svc -n default
+                    kubectl get ingress -n default
                     '''
                 }
             }

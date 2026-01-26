@@ -4,3 +4,4 @@
 *.tfvars
 id_rsa_k8s
 id_rsa_k8s.pub
+kubeconfig0
