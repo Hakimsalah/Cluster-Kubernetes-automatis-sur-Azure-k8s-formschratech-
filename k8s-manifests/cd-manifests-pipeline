@@ -19,9 +19,9 @@ pipeline {
                         kubectl --kubeconfig=$KUBECONFIG --insecure-skip-tls-verify apply -f frontend/
                         kubectl --kubeconfig=$KUBECONFIG --insecure-skip-tls-verify apply -f database/
                         kubectl --kubeconfig=$KUBECONFIG --insecure-skip-tls-verify apply -f ingress/
-                        kubectl rollout status deployment/mysql-deployment
-                        kubectl rollout status deployment/backend-deployment
-                        kubectl rollout status deployment/frontend-deployment
+                        kubectl --kubeconfig=$KUBECONFIG --insecure-skip-tls-verify rollout status deployment/backend-deployment
+                        kubectl --kubeconfig=$KUBECONFIG --insecure-skip-tls-verify rollout status deployment/frontend-deployment
+                        kubectl --kubeconfig=$KUBECONFIG --insecure-skip-tls-verify rollout status deployment/mysql-deployment
                         '''
                     }
                 }
