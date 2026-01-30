@@ -1,6 +1,11 @@
 pipeline {
     agent any
 
+    environment {
+        // Kubeconfig stocké comme secret fichier dans Jenkins
+        KUBECONFIG = ''
+    }
+
     stages {
 
         stage('Checkout Manifests') {
@@ -9,19 +14,54 @@ pipeline {
             }
         }
 
-        stage('Deploy to Kubernetes') {
+        stage('Deploy Database') {
             steps {
-                // Utilise le kubeconfig secret
+                withCredentials([file(credentialsId: 'kubeconfig-secret', variable: 'KUBECONFIG')]) {
+                    dir('k8s-manifests/database') {
+                        sh '''
+                        echo "✅ Creating PersistentVolumeClaim..."
+                        kubectl --kubeconfig=$KUBECONFIG --insecure-skip-tls-verify apply -f mysql-pvc.yaml
+
+                        echo "✅ Creating MySQL secret..."
+                        kubectl --kubeconfig=$KUBECONFIG --insecure-skip-tls-verify apply -f mysql-secret.yaml
+
+                        echo "✅ Deploying MySQL..."
+                        kubectl --kubeconfig=$KUBECONFIG --insecure-skip-tls-verify apply -f mysql-deployment.yaml
+                        kubectl --kubeconfig=$KUBECONFIG --insecure-skip-tls-verify apply -f mysql-service.yaml
+
+                        echo "⏳ Waiting for MySQL to be ready..."
+                        kubectl --kubeconfig=$KUBECONFIG --insecure-skip-tls-verify rollout status deployment/mysql-deployment
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Deploy Backend & Frontend') {
+            steps {
                 withCredentials([file(credentialsId: 'kubeconfig-secret', variable: 'KUBECONFIG')]) {
                     dir('k8s-manifests') {
                         sh '''
+                        echo "✅ Deploying Backend..."
                         kubectl --kubeconfig=$KUBECONFIG --insecure-skip-tls-verify apply -f backend/
-                        kubectl --kubeconfig=$KUBECONFIG --insecure-skip-tls-verify apply -f frontend/
-                        kubectl --kubeconfig=$KUBECONFIG --insecure-skip-tls-verify apply -f database/
-                        kubectl --kubeconfig=$KUBECONFIG --insecure-skip-tls-verify apply -f ingress/
                         kubectl --kubeconfig=$KUBECONFIG --insecure-skip-tls-verify rollout status deployment/backend-deployment
+
+                        echo "✅ Deploying Frontend..."
+                        kubectl --kubeconfig=$KUBECONFIG --insecure-skip-tls-verify apply -f frontend/
                         kubectl --kubeconfig=$KUBECONFIG --insecure-skip-tls-verify rollout status deployment/frontend-deployment
-                        kubectl --kubeconfig=$KUBECONFIG --insecure-skip-tls-verify rollout status deployment/mysql-deployment
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Deploy Ingress') {
+            steps {
+                withCredentials([file(credentialsId: 'kubeconfig-secret', variable: 'KUBECONFIG')]) {
+                    dir('k8s-manifests/ingress') {
+                        sh '''
+                        echo "✅ Deploying Ingress..."
+                        kubectl --kubeconfig=$KUBECONFIG --insecure-skip-tls-verify apply -f .
                         '''
                     }
                 }
@@ -32,9 +72,16 @@ pipeline {
             steps {
                 withCredentials([file(credentialsId: 'kubeconfig-secret', variable: 'KUBECONFIG')]) {
                     sh '''
+                    echo "🔎 Cluster Nodes:"
                     kubectl get nodes
+
+                    echo "🔎 Pods in default namespace:"
                     kubectl get pods -n default
+
+                    echo "🔎 Services in default namespace:"
                     kubectl get svc -n default
+
+                    echo "🔎 Ingress in default namespace:"
                     kubectl get ingress -n default
                     '''
                 }
