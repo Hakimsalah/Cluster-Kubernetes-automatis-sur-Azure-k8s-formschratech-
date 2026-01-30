@@ -14,28 +14,30 @@ pipeline {
             }
         }
 
-        stage('Deploy Database') {
-            steps {
-                withCredentials([file(credentialsId: 'kubeconfig-secret', variable: 'KUBECONFIG')]) {
-                    dir('k8s-manifests/database') {
-                        sh '''
-                        echo "✅ Creating PersistentVolumeClaim..."
-                        kubectl --kubeconfig=$KUBECONFIG --insecure-skip-tls-verify apply -f mysql-pvc.yaml
+        stage('Deploy MySQL') {
+    steps {
+        withCredentials([file(credentialsId: 'kubeconfig-secret', variable: 'KUBECONFIG')]) {
+            sh '''
+            echo "✅ Creating PersistentVolumeClaim..."
+            kubectl --kubeconfig=$KUBECONFIG --insecure-skip-tls-verify apply -f mysql-pvc.yaml
 
-                        echo "✅ Creating MySQL secret..."
-                        kubectl --kubeconfig=$KUBECONFIG --insecure-skip-tls-verify apply -f mysql-secret.yaml
+            echo "⏳ Waiting for PVC to be Bound..."
+            kubectl --kubeconfig=$KUBECONFIG --insecure-skip-tls-verify wait pvc/mysql-pvc --for=condition=Bound --timeout=60s
 
-                        echo "✅ Deploying MySQL..."
-                        kubectl --kubeconfig=$KUBECONFIG --insecure-skip-tls-verify apply -f mysql-deployment.yaml
-                        kubectl --kubeconfig=$KUBECONFIG --insecure-skip-tls-verify apply -f mysql-service.yaml
+            echo "✅ Creating MySQL secret..."
+            kubectl --kubeconfig=$KUBECONFIG --insecure-skip-tls-verify apply -f mysql-secret.yaml
 
-                        echo "⏳ Waiting for MySQL to be ready..."
-                        kubectl --kubeconfig=$KUBECONFIG --insecure-skip-tls-verify rollout status deployment/mysql-deployment
-                        '''
-                    }
-                }
-            }
+            echo "✅ Deploying MySQL..."
+            kubectl --kubeconfig=$KUBECONFIG --insecure-skip-tls-verify apply -f mysql-deployment.yaml
+            kubectl --kubeconfig=$KUBECONFIG --insecure-skip-tls-verify apply -f mysql-service.yaml
+
+            echo "⏳ Waiting for MySQL to be ready..."
+            kubectl --kubeconfig=$KUBECONFIG --insecure-skip-tls-verify rollout status deployment/mysql-deployment
+            '''
         }
+    }
+}
+
 
         stage('Deploy Backend & Frontend') {
             steps {
